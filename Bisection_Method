@@ -1,0 +1,66 @@
+#Bisection Method
+
+import random
+import matplotlib.pyplot as plt
+
+def f(x):
+    return x**2 - x - 1
+
+
+def bisection():
+    x0 = float(input("Enter your initial x value: "))
+    max_iter = int(input("Enter the number of iterations you would like to run: "))
+
+    a = x0
+    fa = f(a)
+
+    print("\nSearching for a second point with the opposite sign.")
+
+    for i in range(100):
+        step = random.uniform(0.5, 5)
+        direction = random.choice([-1, 1])
+        b = a + direction * step
+
+        if fa * f(b) < 0:
+            break
+    else:
+        print("Could not find valid bracket.")
+        return
+
+    if a > b:
+        a, b = b, a
+
+    print("Initial interval:", [a, b])
+
+    iterations = []
+    errors = []
+
+    for n in range(1, max_iter + 1):
+        m = (a + b) / 2
+        fm = f(m)
+
+        iterations.append(n)
+        errors.append(abs(fm))
+
+        print("\nIteration", n)
+        print("Current interval =", [a, b])
+        print("f(midpoint) =", fm)
+
+        if f(a) * fm < 0:
+            print("Sign change in [a, midpoint] → replace b")
+            b = m
+        else:
+            print("Sign change in [midpoint, b] → replace a")
+            a = m
+
+    print("\nApprox root =", m)
+    print("Final function =", f(m))
+
+    plt.semilogy(iterations, errors)
+    plt.xlabel("Iteration Number")
+    plt.ylabel("Absolute Error |f(x_n)|")
+    plt.title("Bisection Method")
+    plt.grid(True)
+    plt.show()
+
+bisection()
