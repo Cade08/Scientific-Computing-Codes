@@ -1,0 +1,20 @@
+import random
+
+def f(x):
+    return x**3 - 1
+
+a = float(input("Enter the lower bound a: "))
+b = float(input("Enter the upper bound b: "))
+n = int(input("Enter the number of random sample points n: "))
+
+sum_fx = 0
+
+for i in range(0, n):
+    x = random.uniform(a, b)
+    sum_fx += f(x)
+    
+avg = sum_fx/n
+
+A = avg*(b - a)
+
+print(A)
