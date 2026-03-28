@@ -1,0 +1,184 @@
+import numpy as np
+
+# constants
+c = 3e8
+eps0 = 8.854e-12
+mu_0 = 4*np.pi*1e-7
+kB = 1.380649e-23
+
+q = 1.0
+m = 1.0
+n0 = 1.0
+T = 1.0
+B0 = 1.0
+
+
+# Electromagnetic field
+def E(t, x):
+    return np.array([0.0, 0.0, 0.0])
+
+
+def B(t, x):
+    return np.array([0.0, 0.0, B0])
+
+
+# Distribution function
+def f(t, x, v):
+    v_x, v_y, v_z = v
+    v2 = v_x**2 + v_y**2 + v_z**2
+    coeff = n0 * (m / (2 * np.pi * kB * T))**(3/2)
+    return coeff * np.exp(-(m * v2) / (2 * kB * T))
+
+
+# numerical gradient
+def grad_scalar(func, x, h=1e-5):
+    grad = np.zeros(3)
+
+    for i in range(3):
+        xp = x.copy()
+        xm = x.copy()
+
+        xp[i] += h
+        xm[i] -= h
+
+        grad[i] = (func(xp) - func(xm)) / (2*h)
+
+    return grad
+
+
+def div_vector(func, x):
+    h = 1e-5
+    total = 0
+
+    for i in range(3):
+        xp = x.copy()
+        xm = x.copy()
+
+        xp[i] += h
+        xm[i] -= h
+
+        total += (func(xp)[i] - func(xm)[i])/(2*h)
+
+    return total
+
+
+def curl_vector(func, x):
+    h = 1e-5
+
+    curl = np.zeros(3)
+
+    for i in range(3):
+        for j in range(3):
+            if i != j:
+                xp = x.copy()
+                xm = x.copy()
+
+                xp[j] += h
+                xm[j] -= h
+
+                curl[i] += (func(xp)[(j+1)%3] - func(xm)[(j+1)%3])/(2*h)
+
+    return curl
+
+
+# velocity integrals
+def rho_from_f(t, x):
+    vs = np.linspace(-3,3,10)
+
+    total = 0
+    for v_x in vs:
+        for v_y in vs:
+            for v_z in vs:
+                v = np.array([v_x,v_y,v_z])
+                total += f(t,x,v)
+
+    dv = (vs[1]-vs[0])**3
+
+    return q * total * dv
+
+
+def J_from_f(t, x):
+    vs = np.linspace(-3,3,10)
+
+    J = np.zeros(3)
+
+    for v_x in vs:
+        for v_y in vs:
+            for v_z in vs:
+                v = np.array([v_x,v_y,v_z])
+                J += v * f(t,x,v)
+
+    dv = (vs[1]-vs[0])**3
+
+    return q * J * dv
+
+
+# Maxwell check
+def rho_from_maxwell(t, x):
+    def Efield(pos):
+        return E(t,pos)
+
+    return eps0 * div_vector(Efield, x)
+
+
+def J_from_maxwell(t, x):
+
+    def Bfield(pos):
+        return B(t,pos)
+
+    curlB = curl_vector(Bfield, x)
+
+    # ignoring time derivative of E for simplicity
+    return curlB/mu_0
+
+
+# Vlasov residual
+def vlasov_residual(t, x, v):
+
+    # time derivative approximate
+    dt = 1e-5
+    df_dt = (f(t+dt,x,v) - f(t-dt,x,v))/(2*dt)
+
+    # spatial gradient
+    def f_x(pos):
+        return f(t,pos,v)
+
+    grad_x = grad_scalar(f_x, x)
+
+    # velocity gradient
+    def f_v(vel):
+        return f(t,x,vel)
+
+    grad_v = grad_scalar(f_v, v)
+
+    Efield = E(t,x)
+    Bfield = B(t,x)
+
+    lorentz = (q/m)*(Efield + np.cross(v,Bfield))
+
+    term = df_dt + np.dot(v,grad_x) + np.dot(lorentz,grad_v)
+
+    return term
+
+
+# example
+t = 0.0
+x = np.array([1.0,0.5,-0.2])
+v = np.array([0.2,-0.1,0.3])
+
+rho_f = rho_from_f(t,x)
+J_f = J_from_f(t,x)
+
+rho_m = rho_from_maxwell(t,x)
+J_m = J_from_maxwell(t,x)
+
+vres = vlasov_residual(t,x,v)
+
+print("Example 2")
+print("rho from f:", rho_f)
+print("rho from maxwell:", rho_m)
+
+print("J from f:", J_f)
+print("J from maxwell:", J_m)
+
+print("Vlasov residual:", vres)
